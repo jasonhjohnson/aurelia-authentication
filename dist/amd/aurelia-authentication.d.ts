@@ -122,11 +122,8 @@ declare module 'aurelia-authentication' {
     // Determines the `window` property name upon which aurelia-authentication data is stored (Default: `window.localStorage`)
     storage: any;
     
-    // The property name used when storing the access token locally
-    accessTokenStorage: any;
-    
-    // The property name used when storing the refresh token locally
-    refreshTokenStorage: any;
+    // The key used for storing the authentication response locally
+    storageKey: any;
     
     //OAuth provider specific related configuration
     // ============================================
@@ -166,30 +163,35 @@ declare module 'aurelia-authentication' {
   }
   export class Authentication {
     constructor(storage: any, config: any, oAuth1: any, oAuth2: any);
+    
+    /* deprecated methods */
     getLoginRoute(): any;
     getLoginRedirect(): any;
     getLoginUrl(): any;
     getSignupUrl(): any;
     getProfileUrl(): any;
     getToken(): any;
+    
+    /* getters/setters for responseObject */
+    responseObject: any;
+    
+    /* get data, update if needed first */
+    getAccessToken(): any;
     getRefreshToken(): any;
-    
-    /* getters/setters for tokens */
-    accessToken: any;
-    refreshToken: any;
-    
-    /* work with the token */
     getPayload(): any;
+    getExp(): any;
+    
+    /* get status from data */
+    getTtl(): any;
     isTokenExpired(): any;
     isAuthenticated(): any;
     
-    /* get and set token from response */
+    /* get and set from response */
+    getDataFromResponse(response: any): any;
+    deleteData(): any;
     getTokenFromResponse(response: any, tokenProp: any, tokenName: any, tokenRoot: any): any;
-    setAccessTokenFromResponse(response: any): any;
-    setRefreshTokenFromResponse(response: any): any;
-    setTokensFromResponse(response: any): any;
-    removeTokens(): any;
-    logout(): any;
+    toUpdateTokenCallstack(): any;
+    resolveUpdateTokenCallstack(response: any): any;
     
     /**
        * Authenticate with third-party
@@ -198,7 +200,6 @@ declare module 'aurelia-authentication' {
        * @param {[{}]}      [userData]
        *
        * @return {Promise<response>}
-       *
        */
     authenticate(name: any, userData?: any): any;
     redirect(redirectUrl: any, defaultRedirectUrl: any): any;
@@ -211,17 +212,9 @@ declare module 'aurelia-authentication' {
     constructor(authentication: any, config: any);
     
     /**
-       * Set true during updateToken process
-       *
-       * @param {Boolean} isRefreshing
-       */
-    isRefreshing: any;
-    
-    /**
        * Getter: The configured client for all aurelia-authentication requests
        *
        * @return {HttpClient}
-       *
        */
     client: any;
     auth: any;
@@ -229,10 +222,9 @@ declare module 'aurelia-authentication' {
     /**
        * Get current user profile from server
        *
-       * @param {[{},Number,String]}  [criteria object or a Number|String converted to {id:criteria}]
+       * @param {[{}|number|string]}  [criteria object or a Number|String converted to {id:criteria}]
        *
        * @return {Promise<response>}
-       *
        */
     getMe(criteria: any): any;
     
@@ -240,10 +232,9 @@ declare module 'aurelia-authentication' {
        * Send current user profile update to server
        *
        * @param {any}                 request body with data.
-       * @param {[{},Number,String]}  [criteria object or a Number|String converted to {id:criteria}]
+       * @param {[{}|Number|String]}  [criteria object or a Number|String converted to {id:criteria}]
        *
        * @return {Promise<response>}
-       *
        */
     updateMe(body: any, criteria: any): any;
     
@@ -251,7 +242,6 @@ declare module 'aurelia-authentication' {
        * Get accessToken from storage
        *
        * @returns {String} current accessToken
-       *
        */
     getAccessToken(): any;
     getCurrentToken(): any;
@@ -260,24 +250,27 @@ declare module 'aurelia-authentication' {
        * Get refreshToken from storage
        *
        * @returns {String} current refreshToken
-       *
        */
     getRefreshToken(): any;
     
     /**
-      * Gets authentication status from token. If autoUpdateToken === true,
-      * updates token and returns true meanwhile
+      * Gets authentication status
       *
-      * @returns {Boolean} true: for Non-JWT tokens and unexpired JWT tokens, false: else
-      *
+      * @returns {Boolean} true: for Non-JWT and unexpired JWT, false: else
       */
     isAuthenticated(): any;
     
     /**
+       * Gets ttl in seconds
+       *
+       * @returns {Number} ttl for JWT tokens, NaN for all other tokens
+       */
+    getTtl(): any;
+    
+    /**
       * Gets exp from token payload and compares to current time
       *
-      * @returns {Boolean | undefined} undefined: Non-JWT payload, true: unexpired JWT tokens, false: else
-      *
+      * @returns {Boolean} returns (ttl > 0)? for JWT, undefined other tokens
       */
     isTokenExpired(): any;
     
@@ -285,31 +278,40 @@ declare module 'aurelia-authentication' {
       * Get payload from tokens
       *
       * @returns {null | String} null: Non-JWT payload, String: JWT token payload
-      *
       */
     getTokenPayload(): any;
     
     /**
+       * Request new accesss token
+       *
+       * @returns {Promise<Response>} requests new token. can be called multiple times
+       */
+    updateToken(): any;
+    
+    /**
        * Signup locally
        *
-       * @param {String|{}}  displayName | object with signup data.
-       * @param {[String]}   [email]
-       * @param {[String]}   [password]
+       * @param {String|{}}   displayName | object with signup data.
+       * @param {[String]|{}} [email | options for post request]
+       * @param {[String]}    [password | redirectUri overwrite]
+       * @param {[{}]}        [options]
+       * @param {[String]}    [redirectUri overwrite]
        *
        * @return {Promise<response>}
-       *
        */
-    signup(displayName: any, email: any, password: any): any;
+    signup(displayName: any, email: any, password: any, options: any, redirectUri: any): any;
     
     /**
        * login locally. Redirect depending on config
        *
-       * @param {{}}  object with login data.
+       * @param {[String]|{}} email | object with signup data.
+       * @param {[String]}    [password | options for post request]
+       * @param {[{}]}        [options | redirectUri overwrite]]
+       * @param {[String]}    [redirectUri overwrite]
        *
        * @return {Promise<response>}
-       *
        */
-    login(email: any, password: any): any;
+    login(email: any, password: any, options: any, redirectUri: any): any;
     
     /**
        * logout locally and redirect to redirectUri (if set) or redirectUri of config
@@ -317,17 +319,8 @@ declare module 'aurelia-authentication' {
        * @param {[String]}  [redirectUri]
        *
        * @return {Promise<>}
-       *
        */
     logout(redirectUri: any): any;
-    
-    /**
-       * update accessToken using the refreshToken
-       *
-       * @return {Promise<response>}
-       *
-       */
-    updateToken(): any;
     
     /**
        * Authenticate with third-party and redirect to redirectUri (if set) or redirectUri of config
@@ -337,7 +330,6 @@ declare module 'aurelia-authentication' {
        * @param {[{}]}      [userData]
        *
        * @return {Promise<response>}
-       *
        */
     authenticate(name: any, redirectUri: any, userData?: any): any;
     
@@ -347,7 +339,6 @@ declare module 'aurelia-authentication' {
        * @param {String}  name of the provider
        *
        * @return {Promise<response>}
-       *
        */
     unlink(name: any, redirectUri: any): any;
   }

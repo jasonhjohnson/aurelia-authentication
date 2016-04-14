@@ -1,8 +1,39 @@
-var _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _class5, _dec5, _class6, _dec6, _class7, _dec7, _class9;
+var _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _dec5, _dec6, _dec7, _dec8, _dec9, _dec10, _class5, _desc, _value, _class6, _dec11, _class7, _dec12, _dec13, _class8, _desc2, _value2, _class9, _dec14, _class10;
+
+function _applyDecoratedDescriptor(target, property, decorators, descriptor, context) {
+  var desc = {};
+  Object['ke' + 'ys'](descriptor).forEach(function (key) {
+    desc[key] = descriptor[key];
+  });
+  desc.enumerable = !!desc.enumerable;
+  desc.configurable = !!desc.configurable;
+
+  if ('value' in desc || desc.initializer) {
+    desc.writable = true;
+  }
+
+  desc = decorators.slice().reverse().reduce(function (desc, decorator) {
+    return decorator(target, property, desc) || desc;
+  }, desc);
+
+  if (context && desc.initializer !== void 0) {
+    desc.value = desc.initializer ? desc.initializer.call(context) : void 0;
+    desc.initializer = undefined;
+  }
+
+  if (desc.initializer === void 0) {
+    Object['define' + 'Property'](target, property, desc);
+    desc = null;
+  }
+
+  return desc;
+}
 
 import extend from 'extend';
+import * as LogManager from 'aurelia-logging';
 import { parseQueryString, join, buildQueryString } from 'aurelia-path';
 import { inject } from 'aurelia-dependency-injection';
+import { deprecated } from 'aurelia-metadata';
 import { Redirect } from 'aurelia-router';
 import { HttpClient } from 'aurelia-fetch-client';
 import { Config, Rest } from 'aurelia-api';
@@ -152,8 +183,7 @@ export let BaseConfig = class BaseConfig {
     this.withCredentials = true;
     this.platform = 'browser';
     this.storage = 'localStorage';
-    this.accessTokenStorage = 'aurelia_access_token';
-    this.refreshTokenStorage = 'aurelia_refresh_token';
+    this.storageKey = 'aurelia_authentication';
     this.providers = {
       google: {
         name: 'google',
@@ -298,12 +328,12 @@ export let BaseConfig = class BaseConfig {
   }
 
   get current() {
-    console.warn('BaseConfig.current() is deprecated. Use BaseConfig directly instead.');
+    LogManager.getLogger('authentication').warn('BaseConfig.current() is deprecated. Use BaseConfig directly instead.');
     return this;
   }
 
   set authToken(authToken) {
-    console.warn('BaseConfig.authToken is deprecated. Use BaseConfig.authTokenType instead.');
+    LogManager.getLogger('authentication').warn('BaseConfig.authToken is deprecated. Use BaseConfig.authTokenType instead.');
     this._authTokenType = authToken;
     this.authTokenType = authToken;
     return authToken;
@@ -313,7 +343,7 @@ export let BaseConfig = class BaseConfig {
   }
 
   set responseTokenProp(responseTokenProp) {
-    console.warn('BaseConfig.responseTokenProp is deprecated. Use BaseConfig.accessTokenProp instead.');
+    LogManager.getLogger('authentication').warn('BaseConfig.responseTokenProp is deprecated. Use BaseConfig.accessTokenProp instead.');
     this._responseTokenProp = responseTokenProp;
     this.accessTokenProp = responseTokenProp;
     return responseTokenProp;
@@ -323,7 +353,7 @@ export let BaseConfig = class BaseConfig {
   }
 
   set tokenRoot(tokenRoot) {
-    console.warn('BaseConfig.tokenRoot is deprecated. Use BaseConfig.accessTokenRoot instead.');
+    LogManager.getLogger('authentication').warn('BaseConfig.tokenRoot is deprecated. Use BaseConfig.accessTokenRoot instead.');
     this._tokenRoot = tokenRoot;
     this.accessTokenRoot = tokenRoot;
     return tokenRoot;
@@ -333,10 +363,9 @@ export let BaseConfig = class BaseConfig {
   }
 
   set tokenName(tokenName) {
-    console.warn('BaseConfig.tokenName is deprecated. Use BaseConfig.accessTokenName instead.');
+    LogManager.getLogger('authentication').warn('BaseConfig.tokenName is deprecated. Use BaseConfig.accessTokenName instead.');
     this._tokenName = tokenName;
     this.accessTokenName = tokenName;
-    this.accessTokenStorage = this.tokenPrefix ? this.tokenPrefix + '_' + this.tokenName : this.tokenName;
     return tokenName;
   }
   get tokenName() {
@@ -344,13 +373,12 @@ export let BaseConfig = class BaseConfig {
   }
 
   set tokenPrefix(tokenPrefix) {
-    console.warn('BaseConfig.tokenPrefix is deprecated. Use BaseConfig.accessTokenStorage instead.');
+    LogManager.getLogger('authentication').warn('BaseConfig.tokenPrefix is obsolete. Use BaseConfig.storageKey instead.');
     this._tokenPrefix = tokenPrefix;
-    this.accessTokenStorage = this.tokenPrefix ? this.tokenPrefix + '_' + this.tokenName : this.tokenName;
     return tokenPrefix;
   }
   get tokenPrefix() {
-    return this._tokenPrefixx;
+    return this._tokenPrefix || 'aurelia';
   }
 };
 
@@ -517,109 +545,153 @@ const camelCase = function (name) {
   });
 };
 
-export let Authentication = (_dec4 = inject(Storage, BaseConfig, OAuth1, OAuth2), _dec4(_class5 = class Authentication {
+export let Authentication = (_dec4 = inject(Storage, BaseConfig, OAuth1, OAuth2), _dec5 = deprecated({ message: 'Use baseConfig.loginRoute instead.' }), _dec6 = deprecated({ message: 'Use baseConfig.loginRedirect instead.' }), _dec7 = deprecated({ message: 'Use baseConfig.withBase(baseConfig.loginUrl) instead.' }), _dec8 = deprecated({ message: 'Use baseConfig.withBase(baseConfig.signupUrl) instead.' }), _dec9 = deprecated({ message: 'Use baseConfig.withBase(baseConfig.profileUrl) instead.' }), _dec10 = deprecated({ message: 'Use .getAccessToken() instead.' }), _dec4(_class5 = (_class6 = class Authentication {
   constructor(storage, config, oAuth1, oAuth2) {
     this.storage = storage;
     this.config = config;
     this.oAuth1 = oAuth1;
     this.oAuth2 = oAuth2;
+    this.updateTokenCallstack = [];
+    this.accessToken = null;
+    this.refreshToken = null;
+    this.payload = null;
+    this.exp = null;
+    this.hasDataStored = false;
+
+    const oldStorageKey = config.tokenPrefix ? config.tokenPrefix + '_' + config.tokenName : this.tokenName;
+    const oldToken = storage.get(oldStorageKey);
+
+    if (oldToken) {
+      LogManager.getLogger('authentication').info('Found token with deprecated format in storage. Converting it to new format. No further action required.');
+      let fakeOldResponse = {};
+      fakeOldResponse[config.accessTokenProp] = oldToken;
+      this.responseObject = fakeOldResponse;
+      storage.remove(oldStorageKey);
+    }
   }
 
   getLoginRoute() {
-    console.warn('Authentication.getLoginRoute is deprecated. Use baseConfig.loginRoute instead.');
     return this.config.loginRoute;
   }
 
   getLoginRedirect() {
-    console.warn('Authentication.getLoginRedirect is deprecated. Use baseConfig.loginRedirect instead.');
     return this.config.loginRedirect;
   }
 
   getLoginUrl() {
-    console.warn('Authentication.getLoginUrl is deprecated. Use baseConfig.withBase(baseConfig.loginUrl) instead.');
     return this.config.withBase(this.config.loginUrl);
   }
 
   getSignupUrl() {
-    console.warn('Authentication.getSignupUrl is deprecated. Use baseConfig.withBase(baseConfig.signupUrl) instead.');
     return this.config.withBase(this.config.signupUrl);
   }
 
   getProfileUrl() {
-    console.warn('Authentication.getProfileUrl is deprecated. Use baseConfig.withBase(baseConfig.profileUrl) instead.');
     return this.config.withBase(this.config.profileUrl);
   }
 
   getToken() {
-    console.warn('Authentication.getToken is deprecated. Use .accessToken instead.');
+    return this.getAccessToken();
+  }
+
+  get responseObject() {
+    return JSON.parse(this.storage.get(this.config.storageKey || {}));
+  }
+
+  set responseObject(response) {
+    if (response) {
+      this.getDataFromResponse(response);
+      return this.storage.set(this.config.storageKey, JSON.stringify(response));
+    }
+    this.deleteData();
+    return this.storage.remove(this.config.storageKey);
+  }
+
+  getAccessToken() {
+    if (!this.hasDataStored) this.getDataFromResponse(this.responseObject);
     return this.accessToken;
   }
 
   getRefreshToken() {
-    console.warn('Authentication.getRefreshToken is deprecated. Use .refreshToken instead.');
+    if (!this.hasDataStored) this.getDataFromResponse(this.responseObject);
     return this.refreshToken;
   }
 
-
-  get accessToken() {
-    return this.storage.get(this.config.accessTokenStorage);
-  }
-
-  set accessToken(newToken) {
-    if (newToken) {
-      return this.storage.set(this.config.accessTokenStorage, newToken);
-    }
-    return this.storage.remove(this.config.accessTokenStorage);
-  }
-
-  get refreshToken() {
-    return this.storage.get(this.config.refreshTokenStorage);
-  }
-
-  set refreshToken(newToken) {
-    if (newToken) {
-      return this.storage.set(this.config.refreshTokenStorage, newToken);
-    }
-    return this.storage.remove(this.config.refreshTokenStorage);
-  }
-
   getPayload() {
-    const accessToken = this.accessToken;
-    if (accessToken && accessToken.split('.').length === 3) {
-      try {
-        const base64Url = this.accessToken.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        return JSON.parse(decodeURIComponent(escape(window.atob(base64))));
-      } catch (e) {
-        return null;
-      }
-    }
-    return null;
+    if (!this.hasDataStored) this.getDataFromResponse(this.responseObject);
+    return this.payload;
+  }
+
+  getExp() {
+    if (!this.hasDataStored) this.getDataFromResponse(this.responseObject);
+    return this.exp;
+  }
+
+  getTtl() {
+    const exp = this.getExp();
+    return Number.isNaN(exp) ? NaN : exp - Math.round(new Date().getTime() / 1000);
   }
 
   isTokenExpired() {
-    const payload = this.getPayload();
-    const exp = payload && payload.exp;
-    if (exp) {
-      return Math.round(new Date().getTime() / 1000) > exp;
-    }
-    return undefined;
+    const timeLeft = this.getTtl();
+    return Number.isNaN(timeLeft) ? undefined : timeLeft < 0;
   }
 
   isAuthenticated() {
-    if (!this.accessToken) {
-      return false;
+    const isTokenExpired = this.isTokenExpired();
+    if (isTokenExpired === undefined) return this.accessToken ? true : false;
+    return !isTokenExpired;
+  }
+
+  getDataFromResponse(response) {
+    const config = this.config;
+
+    this.accessToken = this.getTokenFromResponse(response, config.accessTokenProp, config.accessTokenName, config.accessTokenRoot);
+
+    this.refreshToken = null;
+    if (config.useRefreshToken) {
+      try {
+        this.refreshToken = this.getTokenFromResponse(response, config.refreshTokenProp, config.refreshTokenName, config.refreshTokenRoot);
+      } catch (e) {
+        this.refreshToken = null;
+      }
     }
 
-    if (this.accessToken.split('.').length !== 3) {
-      return true;
+    let payload = null;
+
+    if (this.accessToken && this.accessToken.split('.').length === 3) {
+      try {
+        const base64 = this.accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        payload = JSON.parse(decodeURIComponent(escape(window.atob(base64))));
+      } catch (e) {
+        payload = null;
+      }
     }
 
-    return this.isTokenExpired() !== true;
+    this.payload = payload;
+    this.exp = payload ? parseInt(payload.exp, 10) : NaN;
+
+    this.hasDataStored = true;
+
+    return {
+      accessToken: this.accessToken,
+      refreshToken: this.refreshToken,
+      payload: this.payload,
+      exp: this.exp
+    };
+  }
+
+  deleteData() {
+    this.accessToken = null;
+    this.refreshToken = null;
+    this.payload = null;
+    this.exp = null;
+
+    this.hasDataStored = false;
   }
 
   getTokenFromResponse(response, tokenProp, tokenName, tokenRoot) {
-    if (!response) return null;
+    if (!response) return undefined;
 
     const responseTokenProp = response[tokenProp];
 
@@ -634,46 +706,20 @@ export let Authentication = (_dec4 = inject(Storage, BaseConfig, OAuth1, OAuth2)
       return tokenRootData ? tokenRootData[tokenName] : responseTokenProp[tokenName];
     }
 
-    return response[tokenName] === undefined ? null : response[tokenName];
+    const token = response[tokenName] === undefined ? null : response[tokenName];
+
+    if (!token) throw new Error('Token not found in response');
+
+    return token;
   }
 
-  setAccessTokenFromResponse(response) {
-    const config = this.config;
-    const newToken = this.getTokenFromResponse(response, config.accessTokenProp, config.accessTokenName, config.accessTokenRoot);
-
-    if (!newToken) throw new Error('Token not found in response');
-
-    this.accessToken = newToken;
+  toUpdateTokenCallstack() {
+    return new Promise(resolve => this.updateTokenCallstack.push(resolve));
   }
 
-  setRefreshTokenFromResponse(response) {
-    const config = this.config;
-    const newToken = this.getTokenFromResponse(response, config.refreshTokenProp, config.refreshTokenName, config.refreshTokenRoot);
-
-    if (!newToken) throw new Error('Token not found in response');
-
-    this.refreshToken = newToken;
-  }
-
-  setTokensFromResponse(response) {
-    this.setAccessTokenFromResponse(response);
-
-    if (this.config.useRefreshToken) {
-      this.setRefreshTokenFromResponse(response);
-    }
-  }
-
-  removeTokens() {
-    this.accessToken = null;
-    this.refreshToken = null;
-  }
-
-  logout() {
-    return new Promise(resolve => {
-      this.removeTokens();
-
-      resolve();
-    });
+  resolveUpdateTokenCallstack(response) {
+    this.updateTokenCallstack.map(resolve => resolve(response));
+    this.updateTokenCallstack = [];
   }
 
   authenticate(name, userData = {}) {
@@ -684,12 +730,15 @@ export let Authentication = (_dec4 = inject(Storage, BaseConfig, OAuth1, OAuth2)
 
   redirect(redirectUrl, defaultRedirectUrl) {
     if (redirectUrl === true) {
-      console.warn('Setting redirectUrl === true to actually not redirect is deprecated. Set redirectUrl===false instead.');
+      LogManager.getLogger('authentication').warn('DEPRECATED: Setting redirectUrl === true to actually *not redirect* is deprecated. Set redirectUrl === 0 instead.');
       return;
     }
 
     if (redirectUrl === false) {
-      console.warn('Setting redirectUrl === false to actually use the defaultRedirectUrl has changed. It means "Do not redirect" now. Set redirectUrl to undefined or null to use the defaultRedirectUrl.');
+      LogManager.getLogger('authentication').warn('BREAKING CHANGE: Setting redirectUrl === false to actually *do redirect* is deprecated. Set redirectUrl to undefined or null to use the defaultRedirectUrl if so desired.');
+    }
+
+    if (redirectUrl === 0) {
       return;
     }
     if (typeof redirectUrl === 'string') {
@@ -698,9 +747,9 @@ export let Authentication = (_dec4 = inject(Storage, BaseConfig, OAuth1, OAuth2)
       window.location.href = defaultRedirectUrl;
     }
   }
-}) || _class5);
+}, (_applyDecoratedDescriptor(_class6.prototype, 'getLoginRoute', [_dec5], Object.getOwnPropertyDescriptor(_class6.prototype, 'getLoginRoute'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getLoginRedirect', [_dec6], Object.getOwnPropertyDescriptor(_class6.prototype, 'getLoginRedirect'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getLoginUrl', [_dec7], Object.getOwnPropertyDescriptor(_class6.prototype, 'getLoginUrl'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getSignupUrl', [_dec8], Object.getOwnPropertyDescriptor(_class6.prototype, 'getSignupUrl'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getProfileUrl', [_dec9], Object.getOwnPropertyDescriptor(_class6.prototype, 'getProfileUrl'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getToken', [_dec10], Object.getOwnPropertyDescriptor(_class6.prototype, 'getToken'), _class6.prototype)), _class6)) || _class5);
 
-export let AuthorizeStep = (_dec5 = inject(Authentication), _dec5(_class6 = class AuthorizeStep {
+export let AuthorizeStep = (_dec11 = inject(Authentication), _dec11(_class7 = class AuthorizeStep {
   constructor(authentication) {
     this.authentication = authentication;
   }
@@ -719,12 +768,10 @@ export let AuthorizeStep = (_dec5 = inject(Authentication), _dec5(_class6 = clas
 
     return next();
   }
-}) || _class6);
+}) || _class7);
 
-export let AuthService = (_dec6 = inject(Authentication, BaseConfig), _dec6(_class7 = class AuthService {
+export let AuthService = (_dec12 = inject(Authentication, BaseConfig), _dec13 = deprecated({ message: 'Use .getAccessToken() instead.' }), _dec12(_class8 = (_class9 = class AuthService {
   constructor(authentication, config) {
-    this.isRefreshing = false;
-
     this.authentication = authentication;
     this.config = config;
   }
@@ -734,7 +781,7 @@ export let AuthService = (_dec6 = inject(Authentication, BaseConfig), _dec6(_cla
   }
 
   get auth() {
-    console.warn('AuthService.auth is deprecated. Use .authentication instead.');
+    LogManager.getLogger('authentication').warn('AuthService.auth is deprecated. Use .authentication instead.');
     return this.authentication;
   }
 
@@ -753,27 +800,30 @@ export let AuthService = (_dec6 = inject(Authentication, BaseConfig), _dec6(_cla
   }
 
   getAccessToken() {
-    return this.authentication.accessToken;
+    return this.authentication.getAccessToken();
   }
 
   getCurrentToken() {
-    console.warn('AuthService.getCurrentToken() is deprecated. Use .getAccessToken() instead.');
     return this.getAccessToken();
   }
 
   getRefreshToken() {
-    return this.authentication.refreshToken;
+    return this.authentication.getRefreshToken();
   }
 
   isAuthenticated() {
-    const isExpired = this.authentication.isTokenExpired();
-    if (isExpired && this.config.autoUpdateToken) {
-      if (this.isRefreshing) {
-        return true;
-      }
+    let authenticated = this.authentication.isAuthenticated();
+
+    if (!authenticated && this.config.autoUpdateToken && this.authentication.getAccessToken() && this.authentication.getRefreshToken()) {
       this.updateToken();
+      authenticated = true;
     }
-    return this.authentication.isAuthenticated();
+
+    return authenticated;
+  }
+
+  getTtl() {
+    return this.authentication.getTtl();
   }
 
   isTokenExpired() {
@@ -784,26 +834,47 @@ export let AuthService = (_dec6 = inject(Authentication, BaseConfig), _dec6(_cla
     return this.authentication.getPayload();
   }
 
-  signup(displayName, email, password) {
+  updateToken() {
+    if (!this.authentication.getRefreshToken()) {
+      return Promise.reject(new Error('refreshToken not set'));
+    }
+
+    if (this.authentication.updateTokenCallstack.length === 0) {
+      const content = {
+        grant_type: 'refresh_token',
+        refresh_token: this.authentication.getRefreshToken(),
+        client_id: this.config.clientId ? this.config.clientId : undefined
+      };
+
+      this.client.post(this.config.withBase(this.config.loginUrl), content).then(response => {
+        this.authentication.responseObject = response;
+        this.authentication.resolveUpdateTokenCallstack(this.authentication.isAuthenticated());
+      }).catch(err => {
+        this.authentication.responseObject = null;
+        this.authentication.resolveUpdateTokenCallstack(Promise.reject(err));
+      });
+    }
+
+    return this.authentication.toUpdateTokenCallstack();
+  }
+
+  signup(displayName, email, password, options, redirectUri) {
     let content;
 
     if (typeof arguments[0] === 'object') {
       content = arguments[0];
+      options = arguments[1];
+      redirectUri = arguments[2];
     } else {
-      console.warn('AuthService.signup(displayName, email, password) is deprecated. Provide an object with signup data instead.');
       content = {
         'displayName': displayName,
         'email': email,
         'password': password
       };
     }
-    return this._signup(content);
-  }
-
-  _signup(data, redirectUri) {
-    return this.client.post(this.config.withBase(this.config.signupUrl), data).then(response => {
+    return this.client.post(this.config.withBase(this.config.signupUrl), content, options).then(response => {
       if (this.config.loginOnSignup) {
-        this.authentication.setTokensFromResponse(response);
+        this.authentication.responseObject = response;
       }
       this.authentication.redirect(redirectUri, this.config.signupRedirect);
 
@@ -811,26 +882,27 @@ export let AuthService = (_dec6 = inject(Authentication, BaseConfig), _dec6(_cla
     });
   }
 
-  login(email, password) {
-    let content = {};
+  login(email, password, options, redirectUri) {
+    let content;
 
-    if (typeof arguments[1] !== 'string') {
+    if (typeof arguments[0] === 'object') {
       content = arguments[0];
+      options = arguments[1];
+      redirectUri = arguments[2];
     } else {
-      console.warn('AuthService.login(email, password) is deprecated. Provide an object with login data instead.');
-      content = { email: email, password: password };
+      content = {
+        'email': email,
+        'password': password
+      };
+      options = options;
     }
 
-    return this._login(content);
-  }
-
-  _login(data, redirectUri) {
     if (this.config.clientId) {
       data.client_id = this.config.clientId;
     }
 
-    return this.client.post(this.config.withBase(this.config.loginUrl), data).then(response => {
-      this.authentication.setTokensFromResponse(response);
+    return this.client.post(this.config.withBase(this.config.loginUrl), content, options).then(response => {
+      this.authentication.responseObject = response;
 
       this.authentication.redirect(redirectUri, this.config.loginRedirect);
 
@@ -839,42 +911,18 @@ export let AuthService = (_dec6 = inject(Authentication, BaseConfig), _dec6(_cla
   }
 
   logout(redirectUri) {
-    return this.authentication.logout(redirectUri).then(response => {
+    return new Promise(resolve => {
+      this.authentication.responseObject = null;
+
       this.authentication.redirect(redirectUri, this.config.logoutRedirect);
 
-      return response;
+      resolve();
     });
-  }
-
-  updateToken() {
-    this.isRefreshing = true;
-    const refreshToken = this.authentication.refreshToken;
-    let content = {};
-
-    if (refreshToken) {
-      content = { grant_type: 'refresh_token', refresh_token: refreshToken };
-      if (this.config.clientId) {
-        content.client_id = this.config.clientId;
-      }
-
-      return this.client.post(this.config.withBase(this.config.loginUrl), content).then(response => {
-        this.authentication.setTokensFromResponse(response);
-        return response;
-      }).catch(err => {
-        this.authentication.removeTokens();
-        throw err;
-      }).then(response => {
-        this.isRefreshing = false;
-        return response;
-      });
-    }
-
-    return Promise.reject('refreshToken not enabled');
   }
 
   authenticate(name, redirectUri, userData = {}) {
     return this.authentication.authenticate(name, userData).then(response => {
-      this.authentication.setTokensFromResponse(response);
+      this.authentication.responseObject = response;
 
       this.authentication.redirect(redirectUri, this.config.loginRedirect);
 
@@ -890,9 +938,9 @@ export let AuthService = (_dec6 = inject(Authentication, BaseConfig), _dec6(_cla
       return response;
     });
   }
-}) || _class7);
+}, (_applyDecoratedDescriptor(_class9.prototype, 'getCurrentToken', [_dec13], Object.getOwnPropertyDescriptor(_class9.prototype, 'getCurrentToken'), _class9.prototype)), _class9)) || _class8);
 
-export let FetchConfig = (_dec7 = inject(HttpClient, Config, AuthService, BaseConfig), _dec7(_class9 = class FetchConfig {
+export let FetchConfig = (_dec14 = inject(HttpClient, Config, AuthService, BaseConfig), _dec14(_class10 = class FetchConfig {
   constructor(httpClient, clientConfig, authService, config) {
     this.httpClient = httpClient;
     this.clientConfig = clientConfig;
@@ -973,7 +1021,7 @@ export let FetchConfig = (_dec7 = inject(HttpClient, Config, AuthService, BaseCo
 
     return client;
   }
-}) || _class9);
+}) || _class10);
 
 import './authFilter';
 
