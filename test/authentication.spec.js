@@ -28,7 +28,7 @@ const sessionToken = {
 };
 
 const otherToken = {
-  access_token: 'xx.yy.zz',
+  access_token: 'xx.yy.zz'
 };
 
 describe('Authentication', () => {
