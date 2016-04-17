@@ -85,6 +85,11 @@ declare module 'aurelia-authentication' {
     // This allows the token to be a further object deeper `{ "accessTokenProp": { "accessTokenRoot" : { "accessTokenName" : '...' } } }`
     accessTokenRoot: any;
     
+    // Token properties
+    // ------------------------------------------------------------
+    // The payload property (for JWT) or responseObject properties for the expiration date. Accepts Number or Date
+    accessTokenExpProp: any;
+    
     // Refresh Token Options
     // =====================
     // Option to turn refresh tokens On/Off
@@ -254,30 +259,30 @@ declare module 'aurelia-authentication' {
     getRefreshToken(): any;
     
     /**
-      * Gets authentication status
+      * Gets authentication status. Auto-updates the token is so specified in the config
       *
-      * @returns {Boolean} true: for Non-JWT and unexpired JWT, false: else
+      * @returns {Boolean} checks if a token present and, if applicable, that token isn't expired
       */
     isAuthenticated(): any;
     
     /**
        * Gets ttl in seconds
        *
-       * @returns {Number} ttl for JWT tokens, NaN for all other tokens
+       * @returns {Number} gets ttl from expiration date. if expiration date in unknown, returns NaN
        */
     getTtl(): any;
     
     /**
-      * Gets exp from token payload and compares to current time
+      * Tests if the token is expired
       *
-      * @returns {Boolean} returns (ttl > 0)? for JWT, undefined other tokens
+      * @returns {Boolean} if ttl is known, returns (ttl > 0)?, else returns undefined
       */
     isTokenExpired(): any;
     
     /**
-      * Get payload from tokens
+      * Gets payload from token or from login response
       *
-      * @returns {null | String} null: Non-JWT payload, String: JWT token payload
+      * @returns {{}} returns token payload for JWT or login response for other tokens
       */
     getTokenPayload(): any;
     

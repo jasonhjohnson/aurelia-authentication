@@ -173,6 +173,7 @@ export let BaseConfig = class BaseConfig {
     this.accessTokenProp = 'access_token';
     this.accessTokenName = 'token';
     this.accessTokenRoot = false;
+    this.accessTokenExpProp = 'exp';
     this.useRefreshToken = false;
     this.autoUpdateToken = true;
     this.clientId = false;
@@ -668,8 +669,14 @@ export let Authentication = (_dec4 = inject(Storage, BaseConfig, OAuth1, OAuth2)
       }
     }
 
-    this.payload = payload;
-    this.exp = payload ? parseInt(payload.exp, 10) : NaN;
+    this.payload = payload || response;
+
+    this.exp = NaN;
+    if (this.payload) {
+      const exp = this.payload[this.config.accessTokenExpProp];
+      this.exp = Number(new Date(exp));
+      this.exp = this.exp ? this.exp : parseInt(exp, 10);
+    }
 
     this.hasDataStored = true;
 

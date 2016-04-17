@@ -241,6 +241,7 @@ define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-depende
       this.accessTokenProp = 'access_token';
       this.accessTokenName = 'token';
       this.accessTokenRoot = false;
+      this.accessTokenExpProp = 'exp';
       this.useRefreshToken = false;
       this.autoUpdateToken = true;
       this.clientId = false;
@@ -754,8 +755,14 @@ define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-depende
         }
       }
 
-      this.payload = payload;
-      this.exp = payload ? parseInt(payload.exp, 10) : NaN;
+      this.payload = payload || response;
+
+      this.exp = NaN;
+      if (this.payload) {
+        var exp = this.payload[this.config.accessTokenExpProp];
+        this.exp = Number(new Date(exp));
+        this.exp = this.exp ? this.exp : parseInt(exp, 10);
+      }
 
       this.hasDataStored = true;
 
