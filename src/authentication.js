@@ -155,7 +155,13 @@ export class Authentication {
     }
 
     this.payload = payload || response;
-    this.exp = payload ? parseInt(payload.exp, 10) : NaN;
+
+    this.exp = NaN;
+    if (this.payload) {
+      const exp = this.payload[this.config.accessTokenExpProp];
+      this.exp =  Number(new Date(exp));
+      this.exp = this.exp ? this.exp : parseInt(exp, 10);
+    }
 
     this.hasDataStored = true;
 

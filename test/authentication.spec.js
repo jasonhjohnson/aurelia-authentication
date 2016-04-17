@@ -172,12 +172,26 @@ describe('Authentication', () => {
       authentication.deleteData();
     });
 
-    it('Should analyze response first and return exp', () => {
+    it('Should get exp from JWT', () => {
       authentication.responseObject = {token: tokenPast.jwt};
 
       const exp = authentication.getExp();
       expect(typeof exp === 'number').toBe(true);
       expect(exp).toBe(Number(tokenPast.payload.exp));
+    });
+
+    it('Should get exp from sessionToken.created', () => {
+      authentication.config.accessTokenProp = 'id';
+      authentication.config.accessTokenExpProp = 'created';
+
+      authentication.responseObject = sessionToken;
+
+      const exp = authentication.getExp();
+      expect(typeof exp === 'number').toBe(true);
+      expect(exp).toBe(Number(new Date(sessionToken.created)));
+
+      authentication.config.accessTokenProp = 'access_token';
+      authentication.config.accessTokenExpProp = 'exp';
     });
   });
 
@@ -205,6 +219,19 @@ describe('Authentication', () => {
       const timeLeft = authentication.getTtl();
       expect(typeof timeLeft === 'number').toBe(true);
       expect(timeLeft).toBe(tokenPast.payload.exp - Math.round(new Date().getTime() / 1000));
+    });
+
+    it('Should be exp-currentTime for sessionToken', () => {
+      authentication.config.accessTokenProp = 'id';
+      authentication.config.accessTokenExpProp = 'created';
+      authentication.responseObject = sessionToken;
+
+      const timeLeft = authentication.getTtl();
+      expect(typeof timeLeft === 'number').toBe(true);
+      expect(timeLeft).toBe(Number(new Date(sessionToken.created)) - Math.round(new Date().getTime() / 1000));
+
+      authentication.config.accessTokenProp = 'access_token';
+      authentication.config.accessTokenExpProp = 'exp';
     });
   });
 
@@ -238,6 +265,18 @@ describe('Authentication', () => {
       const isTokenExpired = authentication.isTokenExpired();
       expect(typeof isTokenExpired === 'boolean').toBe(true);
       expect(isTokenExpired).toBe(false);
+    });
+
+    it('Should be boolean for sessionToken', () => {
+      authentication.config.accessTokenProp = 'id';
+      authentication.config.accessTokenExpProp = 'created';
+      authentication.responseObject = sessionToken;
+
+      const isTokenExpired = authentication.isTokenExpired();
+      expect(typeof isTokenExpired === 'boolean').toBe(true);
+
+      authentication.config.accessTokenProp = 'access_token';
+      authentication.config.accessTokenExpProp = 'exp';
     });
   });
 
