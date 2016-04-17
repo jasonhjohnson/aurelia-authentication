@@ -119,7 +119,7 @@ export class AuthService {
   /**
   * Get payload from tokens
   *
-  * @returns {null | String} null: Non-JWT payload, String: JWT token payload
+  * @returns {{}} token payload for JWT or responseObject for other tokens
   */
   getTokenPayload() {
     return this.authentication.getPayload();

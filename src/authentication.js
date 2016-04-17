@@ -154,7 +154,7 @@ export class Authentication {
       }
     }
 
-    this.payload = payload;
+    this.payload = payload || response;
     this.exp = payload ? parseInt(payload.exp, 10) : NaN;
 
     this.hasDataStored = true;
