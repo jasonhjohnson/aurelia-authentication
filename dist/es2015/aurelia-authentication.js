@@ -1,4 +1,4 @@
-var _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _dec5, _dec6, _dec7, _dec8, _dec9, _dec10, _class5, _desc, _value, _class6, _dec11, _class7, _dec12, _dec13, _class8, _desc2, _value2, _class9, _dec14, _class10;
+var _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _dec5, _dec6, _dec7, _dec8, _dec9, _dec10, _class5, _desc, _value, _class6, _dec11, _dec12, _class7, _desc2, _value2, _class8, _dec13, _class9, _dec14, _class10;
 
 function _applyDecoratedDescriptor(target, property, decorators, descriptor, context) {
   var desc = {};
@@ -173,7 +173,6 @@ export let BaseConfig = class BaseConfig {
     this.accessTokenProp = 'access_token';
     this.accessTokenName = 'token';
     this.accessTokenRoot = false;
-    this.accessTokenExpProp = 'exp';
     this.useRefreshToken = false;
     this.autoUpdateToken = true;
     this.clientId = false;
@@ -190,7 +189,7 @@ export let BaseConfig = class BaseConfig {
         name: 'google',
         url: '/auth/google',
         authorizationEndpoint: 'https://accounts.google.com/o/oauth2/auth',
-        redirectUri: window.location.origin || window.location.protocol + '//' + window.location.host,
+        redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
         scope: ['profile', 'email'],
         scopePrefix: 'openid',
         scopeDelimiter: ' ',
@@ -207,7 +206,7 @@ export let BaseConfig = class BaseConfig {
         name: 'facebook',
         url: '/auth/facebook',
         authorizationEndpoint: 'https://www.facebook.com/v2.3/dialog/oauth',
-        redirectUri: window.location.origin + '/' || window.location.protocol + '//' + window.location.host + '/',
+        redirectUri: encodeURI(window.location.origin + '/' || window.location.protocol + '//' + window.location.host + '/'),
         scope: ['email'],
         scopeDelimiter: ',',
         nonce: function () {
@@ -225,7 +224,7 @@ export let BaseConfig = class BaseConfig {
         name: 'linkedin',
         url: '/auth/linkedin',
         authorizationEndpoint: 'https://www.linkedin.com/uas/oauth2/authorization',
-        redirectUri: window.location.origin || window.location.protocol + '//' + window.location.host,
+        redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
         requiredUrlParams: ['state'],
         scope: ['r_emailaddress'],
         scopeDelimiter: ' ',
@@ -240,7 +239,7 @@ export let BaseConfig = class BaseConfig {
         name: 'github',
         url: '/auth/github',
         authorizationEndpoint: 'https://github.com/login/oauth/authorize',
-        redirectUri: window.location.origin || window.location.protocol + '//' + window.location.host,
+        redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
         optionalUrlParams: ['scope'],
         scope: ['user:email'],
         scopeDelimiter: ' ',
@@ -254,7 +253,7 @@ export let BaseConfig = class BaseConfig {
         name: 'yahoo',
         url: '/auth/yahoo',
         authorizationEndpoint: 'https://api.login.yahoo.com/oauth2/request_auth',
-        redirectUri: window.location.origin || window.location.protocol + '//' + window.location.host,
+        redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
         scope: [],
         scopeDelimiter: ',',
         type: '2.0',
@@ -277,7 +276,7 @@ export let BaseConfig = class BaseConfig {
         name: 'live',
         url: '/auth/live',
         authorizationEndpoint: 'https://login.live.com/oauth20_authorize.srf',
-        redirectUri: window.location.origin || window.location.protocol + '//' + window.location.host,
+        redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
         scope: ['wl.emails'],
         scopeDelimiter: ' ',
         requiredUrlParams: ['display', 'scope'],
@@ -292,7 +291,7 @@ export let BaseConfig = class BaseConfig {
         name: 'instagram',
         url: '/auth/instagram',
         authorizationEndpoint: 'https://api.instagram.com/oauth/authorize',
-        redirectUri: window.location.origin || window.location.protocol + '//' + window.location.host,
+        redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
         requiredUrlParams: ['scope'],
         scope: ['basic'],
         scopeDelimiter: '+',
@@ -669,14 +668,8 @@ export let Authentication = (_dec4 = inject(Storage, BaseConfig, OAuth1, OAuth2)
       }
     }
 
-    this.payload = payload || response;
-
-    this.exp = NaN;
-    if (this.payload) {
-      const exp = this.payload[this.config.accessTokenExpProp];
-      this.exp = Number(new Date(exp));
-      this.exp = this.exp ? this.exp : parseInt(exp, 10);
-    }
+    this.payload = payload;
+    this.exp = payload ? parseInt(payload.exp, 10) : NaN;
 
     this.hasDataStored = true;
 
@@ -756,28 +749,7 @@ export let Authentication = (_dec4 = inject(Storage, BaseConfig, OAuth1, OAuth2)
   }
 }, (_applyDecoratedDescriptor(_class6.prototype, 'getLoginRoute', [_dec5], Object.getOwnPropertyDescriptor(_class6.prototype, 'getLoginRoute'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getLoginRedirect', [_dec6], Object.getOwnPropertyDescriptor(_class6.prototype, 'getLoginRedirect'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getLoginUrl', [_dec7], Object.getOwnPropertyDescriptor(_class6.prototype, 'getLoginUrl'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getSignupUrl', [_dec8], Object.getOwnPropertyDescriptor(_class6.prototype, 'getSignupUrl'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getProfileUrl', [_dec9], Object.getOwnPropertyDescriptor(_class6.prototype, 'getProfileUrl'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getToken', [_dec10], Object.getOwnPropertyDescriptor(_class6.prototype, 'getToken'), _class6.prototype)), _class6)) || _class5);
 
-export let AuthorizeStep = (_dec11 = inject(Authentication), _dec11(_class7 = class AuthorizeStep {
-  constructor(authentication) {
-    this.authentication = authentication;
-  }
-
-  run(routingContext, next) {
-    const isLoggedIn = this.authentication.isAuthenticated();
-    const loginRoute = this.authentication.config.loginRoute;
-
-    if (routingContext.getAllInstructions().some(i => i.config.auth)) {
-      if (!isLoggedIn) {
-        return next.cancel(new Redirect(loginRoute));
-      }
-    } else if (isLoggedIn && routingContext.getAllInstructions().some(i => i.fragment === loginRoute)) {
-      return next.cancel(new Redirect(this.authentication.config.loginRedirect));
-    }
-
-    return next();
-  }
-}) || _class7);
-
-export let AuthService = (_dec12 = inject(Authentication, BaseConfig), _dec13 = deprecated({ message: 'Use .getAccessToken() instead.' }), _dec12(_class8 = (_class9 = class AuthService {
+export let AuthService = (_dec11 = inject(Authentication, BaseConfig), _dec12 = deprecated({ message: 'Use .getAccessToken() instead.' }), _dec11(_class7 = (_class8 = class AuthService {
   constructor(authentication, config) {
     this.authentication = authentication;
     this.config = config;
@@ -945,7 +917,28 @@ export let AuthService = (_dec12 = inject(Authentication, BaseConfig), _dec13 = 
       return response;
     });
   }
-}, (_applyDecoratedDescriptor(_class9.prototype, 'getCurrentToken', [_dec13], Object.getOwnPropertyDescriptor(_class9.prototype, 'getCurrentToken'), _class9.prototype)), _class9)) || _class8);
+}, (_applyDecoratedDescriptor(_class8.prototype, 'getCurrentToken', [_dec12], Object.getOwnPropertyDescriptor(_class8.prototype, 'getCurrentToken'), _class8.prototype)), _class8)) || _class7);
+
+export let AuthorizeStep = (_dec13 = inject(Authentication), _dec13(_class9 = class AuthorizeStep {
+  constructor(authentication) {
+    this.authentication = authentication;
+  }
+
+  run(routingContext, next) {
+    const isLoggedIn = this.authentication.isAuthenticated();
+    const loginRoute = this.authentication.config.loginRoute;
+
+    if (routingContext.getAllInstructions().some(i => i.config.auth)) {
+      if (!isLoggedIn) {
+        return next.cancel(new Redirect(loginRoute));
+      }
+    } else if (isLoggedIn && routingContext.getAllInstructions().some(i => i.fragment === loginRoute)) {
+      return next.cancel(new Redirect(this.authentication.config.loginRedirect));
+    }
+
+    return next();
+  }
+}) || _class9);
 
 export let FetchConfig = (_dec14 = inject(HttpClient, Config, AuthService, BaseConfig), _dec14(_class10 = class FetchConfig {
   constructor(httpClient, clientConfig, authService, config) {

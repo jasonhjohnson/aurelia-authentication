@@ -1,7 +1,7 @@
 'use strict';
 
 System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependency-injection', 'aurelia-metadata', 'aurelia-router', 'aurelia-fetch-client', 'aurelia-api', './authFilter'], function (_export, _context) {
-  var extend, LogManager, parseQueryString, join, buildQueryString, inject, deprecated, Redirect, HttpClient, Config, Rest, _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _dec5, _dec6, _dec7, _dec8, _dec9, _dec10, _class5, _desc, _value, _class6, _dec11, _class7, _dec12, _dec13, _class8, _desc2, _value2, _class9, _dec14, _class10, _typeof, _createClass, Popup, buildPopupWindowOptions, parseUrl, BaseConfig, Storage, OAuth1, OAuth2, camelCase, Authentication, AuthorizeStep, AuthService, FetchConfig;
+  var extend, LogManager, parseQueryString, join, buildQueryString, inject, deprecated, Redirect, HttpClient, Config, Rest, _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _dec5, _dec6, _dec7, _dec8, _dec9, _dec10, _class5, _desc, _value, _class6, _dec11, _dec12, _class7, _desc2, _value2, _class8, _dec13, _class9, _dec14, _class10, _typeof, _createClass, Popup, buildPopupWindowOptions, parseUrl, BaseConfig, Storage, OAuth1, OAuth2, camelCase, Authentication, AuthService, AuthorizeStep, FetchConfig;
 
   function _applyDecoratedDescriptor(target, property, decorators, descriptor, context) {
     var desc = {};
@@ -274,7 +274,6 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
           this.accessTokenProp = 'access_token';
           this.accessTokenName = 'token';
           this.accessTokenRoot = false;
-          this.accessTokenExpProp = 'exp';
           this.useRefreshToken = false;
           this.autoUpdateToken = true;
           this.clientId = false;
@@ -291,7 +290,7 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
               name: 'google',
               url: '/auth/google',
               authorizationEndpoint: 'https://accounts.google.com/o/oauth2/auth',
-              redirectUri: window.location.origin || window.location.protocol + '//' + window.location.host,
+              redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
               scope: ['profile', 'email'],
               scopePrefix: 'openid',
               scopeDelimiter: ' ',
@@ -308,7 +307,7 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
               name: 'facebook',
               url: '/auth/facebook',
               authorizationEndpoint: 'https://www.facebook.com/v2.3/dialog/oauth',
-              redirectUri: window.location.origin + '/' || window.location.protocol + '//' + window.location.host + '/',
+              redirectUri: encodeURI(window.location.origin + '/' || window.location.protocol + '//' + window.location.host + '/'),
               scope: ['email'],
               scopeDelimiter: ',',
               nonce: function nonce() {
@@ -326,7 +325,7 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
               name: 'linkedin',
               url: '/auth/linkedin',
               authorizationEndpoint: 'https://www.linkedin.com/uas/oauth2/authorization',
-              redirectUri: window.location.origin || window.location.protocol + '//' + window.location.host,
+              redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
               requiredUrlParams: ['state'],
               scope: ['r_emailaddress'],
               scopeDelimiter: ' ',
@@ -341,7 +340,7 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
               name: 'github',
               url: '/auth/github',
               authorizationEndpoint: 'https://github.com/login/oauth/authorize',
-              redirectUri: window.location.origin || window.location.protocol + '//' + window.location.host,
+              redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
               optionalUrlParams: ['scope'],
               scope: ['user:email'],
               scopeDelimiter: ' ',
@@ -355,7 +354,7 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
               name: 'yahoo',
               url: '/auth/yahoo',
               authorizationEndpoint: 'https://api.login.yahoo.com/oauth2/request_auth',
-              redirectUri: window.location.origin || window.location.protocol + '//' + window.location.host,
+              redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
               scope: [],
               scopeDelimiter: ',',
               type: '2.0',
@@ -378,7 +377,7 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
               name: 'live',
               url: '/auth/live',
               authorizationEndpoint: 'https://login.live.com/oauth20_authorize.srf',
-              redirectUri: window.location.origin || window.location.protocol + '//' + window.location.host,
+              redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
               scope: ['wl.emails'],
               scopeDelimiter: ' ',
               requiredUrlParams: ['display', 'scope'],
@@ -393,7 +392,7 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
               name: 'instagram',
               url: '/auth/instagram',
               authorizationEndpoint: 'https://api.instagram.com/oauth/authorize',
-              redirectUri: window.location.origin || window.location.protocol + '//' + window.location.host,
+              redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
               requiredUrlParams: ['scope'],
               scope: ['basic'],
               scopeDelimiter: '+',
@@ -797,14 +796,8 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
             }
           }
 
-          this.payload = payload || response;
-
-          this.exp = NaN;
-          if (this.payload) {
-            var exp = this.payload[this.config.accessTokenExpProp];
-            this.exp = Number(new Date(exp));
-            this.exp = this.exp ? this.exp : parseInt(exp, 10);
-          }
+          this.payload = payload;
+          this.exp = payload ? parseInt(payload.exp, 10) : NaN;
 
           this.hasDataStored = true;
 
@@ -911,38 +904,7 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
 
       _export('Authentication', Authentication);
 
-      _export('AuthorizeStep', _export('AuthorizeStep', AuthorizeStep = (_dec11 = inject(Authentication), _dec11(_class7 = function () {
-        function AuthorizeStep(authentication) {
-          _classCallCheck(this, AuthorizeStep);
-
-          this.authentication = authentication;
-        }
-
-        AuthorizeStep.prototype.run = function run(routingContext, next) {
-          var isLoggedIn = this.authentication.isAuthenticated();
-          var loginRoute = this.authentication.config.loginRoute;
-
-          if (routingContext.getAllInstructions().some(function (i) {
-            return i.config.auth;
-          })) {
-            if (!isLoggedIn) {
-              return next.cancel(new Redirect(loginRoute));
-            }
-          } else if (isLoggedIn && routingContext.getAllInstructions().some(function (i) {
-            return i.fragment === loginRoute;
-          })) {
-            return next.cancel(new Redirect(this.authentication.config.loginRedirect));
-          }
-
-          return next();
-        };
-
-        return AuthorizeStep;
-      }()) || _class7)));
-
-      _export('AuthorizeStep', AuthorizeStep);
-
-      _export('AuthService', _export('AuthService', AuthService = (_dec12 = inject(Authentication, BaseConfig), _dec13 = deprecated({ message: 'Use .getAccessToken() instead.' }), _dec12(_class8 = (_class9 = function () {
+      _export('AuthService', _export('AuthService', AuthService = (_dec11 = inject(Authentication, BaseConfig), _dec12 = deprecated({ message: 'Use .getAccessToken() instead.' }), _dec11(_class7 = (_class8 = function () {
         function AuthService(authentication, config) {
           _classCallCheck(this, AuthService);
 
@@ -1132,9 +1094,40 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
         }]);
 
         return AuthService;
-      }(), (_applyDecoratedDescriptor(_class9.prototype, 'getCurrentToken', [_dec13], Object.getOwnPropertyDescriptor(_class9.prototype, 'getCurrentToken'), _class9.prototype)), _class9)) || _class8)));
+      }(), (_applyDecoratedDescriptor(_class8.prototype, 'getCurrentToken', [_dec12], Object.getOwnPropertyDescriptor(_class8.prototype, 'getCurrentToken'), _class8.prototype)), _class8)) || _class7)));
 
       _export('AuthService', AuthService);
+
+      _export('AuthorizeStep', _export('AuthorizeStep', AuthorizeStep = (_dec13 = inject(Authentication), _dec13(_class9 = function () {
+        function AuthorizeStep(authentication) {
+          _classCallCheck(this, AuthorizeStep);
+
+          this.authentication = authentication;
+        }
+
+        AuthorizeStep.prototype.run = function run(routingContext, next) {
+          var isLoggedIn = this.authentication.isAuthenticated();
+          var loginRoute = this.authentication.config.loginRoute;
+
+          if (routingContext.getAllInstructions().some(function (i) {
+            return i.config.auth;
+          })) {
+            if (!isLoggedIn) {
+              return next.cancel(new Redirect(loginRoute));
+            }
+          } else if (isLoggedIn && routingContext.getAllInstructions().some(function (i) {
+            return i.fragment === loginRoute;
+          })) {
+            return next.cancel(new Redirect(this.authentication.config.loginRedirect));
+          }
+
+          return next();
+        };
+
+        return AuthorizeStep;
+      }()) || _class9)));
+
+      _export('AuthorizeStep', AuthorizeStep);
 
       _export('FetchConfig', _export('FetchConfig', FetchConfig = (_dec14 = inject(HttpClient, Config, AuthService, BaseConfig), _dec14(_class10 = function () {
         function FetchConfig(httpClient, clientConfig, authService, config) {

@@ -208,12 +208,6 @@ export class BaseConfig {
   // This allows the token to be a further object deeper `{ "accessTokenProp": { "accessTokenRoot" : { "accessTokenName" : '...' } } }`
   accessTokenRoot = false;
 
-  // Token properties
-  // ------------------------------------------------------------
-
-  // The payload property (for JWT) or responseObject properties for the expiration date. Accepts Number or Date
-  accessTokenExpProp = 'exp';
-
 
   // Refresh Token Options
   // =====================
@@ -258,7 +252,7 @@ export class BaseConfig {
       name: 'google',
       url: '/auth/google',
       authorizationEndpoint: 'https://accounts.google.com/o/oauth2/auth',
-      redirectUri: window.location.origin || window.location.protocol + '//' + window.location.host,
+      redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
       scope: ['profile', 'email'],
       scopePrefix: 'openid',
       scopeDelimiter: ' ',
@@ -275,7 +269,7 @@ export class BaseConfig {
       name: 'facebook',
       url: '/auth/facebook',
       authorizationEndpoint: 'https://www.facebook.com/v2.3/dialog/oauth',
-      redirectUri: window.location.origin + '/' || window.location.protocol + '//' + window.location.host + '/',
+      redirectUri: encodeURI(window.location.origin + '/' || window.location.protocol + '//' + window.location.host + '/'),
       scope: ['email'],
       scopeDelimiter: ',',
       nonce: function() {
@@ -293,7 +287,7 @@ export class BaseConfig {
       name: 'linkedin',
       url: '/auth/linkedin',
       authorizationEndpoint: 'https://www.linkedin.com/uas/oauth2/authorization',
-      redirectUri: window.location.origin || window.location.protocol + '//' + window.location.host,
+      redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
       requiredUrlParams: ['state'],
       scope: ['r_emailaddress'],
       scopeDelimiter: ' ',
@@ -308,7 +302,7 @@ export class BaseConfig {
       name: 'github',
       url: '/auth/github',
       authorizationEndpoint: 'https://github.com/login/oauth/authorize',
-      redirectUri: window.location.origin || window.location.protocol + '//' + window.location.host,
+      redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
       optionalUrlParams: ['scope'],
       scope: ['user:email'],
       scopeDelimiter: ' ',
@@ -322,7 +316,7 @@ export class BaseConfig {
       name: 'yahoo',
       url: '/auth/yahoo',
       authorizationEndpoint: 'https://api.login.yahoo.com/oauth2/request_auth',
-      redirectUri: window.location.origin || window.location.protocol + '//' + window.location.host,
+      redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
       scope: [],
       scopeDelimiter: ',',
       type: '2.0',
@@ -345,7 +339,7 @@ export class BaseConfig {
       name: 'live',
       url: '/auth/live',
       authorizationEndpoint: 'https://login.live.com/oauth20_authorize.srf',
-      redirectUri: window.location.origin || window.location.protocol + '//' + window.location.host,
+      redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
       scope: ['wl.emails'],
       scopeDelimiter: ' ',
       requiredUrlParams: ['display', 'scope'],
@@ -360,7 +354,7 @@ export class BaseConfig {
       name: 'instagram',
       url: '/auth/instagram',
       authorizationEndpoint: 'https://api.instagram.com/oauth/authorize',
-      redirectUri: window.location.origin || window.location.protocol + '//' + window.location.host,
+      redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
       requiredUrlParams: ['scope'],
       scope: ['basic'],
       scopeDelimiter: '+',
@@ -761,14 +755,8 @@ export class Authentication {
       }
     }
 
-    this.payload = payload || response;
-
-    this.exp = NaN;
-    if (this.payload) {
-      const exp = this.payload[this.config.accessTokenExpProp];
-      this.exp =  Number(new Date(exp));
-      this.exp = this.exp ? this.exp : parseInt(exp, 10);
-    }
+    this.payload = payload;
+    this.exp = payload ? parseInt(payload.exp, 10) : NaN;
 
     this.hasDataStored = true;
 
@@ -857,28 +845,6 @@ export class Authentication {
   }
 }
 
-@inject(Authentication)
-export class AuthorizeStep {
-  constructor(authentication) {
-    this.authentication = authentication;
-  }
-
-  run(routingContext, next) {
-    const isLoggedIn = this.authentication.isAuthenticated();
-    const loginRoute = this.authentication.config.loginRoute;
-
-    if (routingContext.getAllInstructions().some(i => i.config.auth)) {
-      if (!isLoggedIn) {
-        return next.cancel(new Redirect(loginRoute));
-      }
-    } else if (isLoggedIn && routingContext.getAllInstructions().some(i => i.fragment === loginRoute)) {
-      return next.cancel(new Redirect( this.authentication.config.loginRedirect ));
-    }
-
-    return next();
-  }
-}
-
 @inject(Authentication, BaseConfig)
 export class AuthService {
   constructor(authentication, config) {
@@ -953,9 +919,9 @@ export class AuthService {
   }
 
  /**
-  * Gets authentication status. Auto-updates the token is so specified in the config
+  * Gets authentication status
   *
-  * @returns {Boolean} checks if a token present and, if applicable, that token isn't expired
+  * @returns {Boolean} true: for Non-JWT and unexpired JWT, false: else
   */
   isAuthenticated() {
     let authenticated = this.authentication.isAuthenticated();
@@ -975,25 +941,25 @@ export class AuthService {
   /**
    * Gets ttl in seconds
    *
-   * @returns {Number} gets ttl from expiration date. if expiration date in unknown, returns NaN
+   * @returns {Number} ttl for JWT tokens, NaN for all other tokens
    */
   getTtl() {
     return this.authentication.getTtl();
   }
 
  /**
-  * Tests if the token is expired
+  * Gets exp from token payload and compares to current time
   *
-  * @returns {Boolean} if ttl is known, returns (ttl > 0)?, else returns undefined
+  * @returns {Boolean} returns (ttl > 0)? for JWT, undefined other tokens
   */
   isTokenExpired() {
     return this.authentication.isTokenExpired();
   }
 
   /**
-  * Gets payload from token or from login response
+  * Get payload from tokens
   *
-  * @returns {{}} returns token payload for JWT or login response for other tokens
+  * @returns {null | String} null: Non-JWT payload, String: JWT token payload
   */
   getTokenPayload() {
     return this.authentication.getPayload();
@@ -1157,6 +1123,28 @@ export class AuthService {
 
         return response;
       });
+  }
+}
+
+@inject(Authentication)
+export class AuthorizeStep {
+  constructor(authentication) {
+    this.authentication = authentication;
+  }
+
+  run(routingContext, next) {
+    const isLoggedIn = this.authentication.isAuthenticated();
+    const loginRoute = this.authentication.config.loginRoute;
+
+    if (routingContext.getAllInstructions().some(i => i.config.auth)) {
+      if (!isLoggedIn) {
+        return next.cancel(new Redirect(loginRoute));
+      }
+    } else if (isLoggedIn && routingContext.getAllInstructions().some(i => i.fragment === loginRoute)) {
+      return next.cancel(new Redirect( this.authentication.config.loginRedirect ));
+    }
+
+    return next();
   }
 }
 

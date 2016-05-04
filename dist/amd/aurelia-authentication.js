@@ -4,7 +4,7 @@ define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-depende
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
-  exports.configure = exports.FetchConfig = exports.AuthService = exports.AuthorizeStep = exports.Authentication = exports.OAuth2 = exports.OAuth1 = exports.Storage = exports.BaseConfig = exports.Popup = undefined;
+  exports.configure = exports.FetchConfig = exports.AuthorizeStep = exports.AuthService = exports.Authentication = exports.OAuth2 = exports.OAuth1 = exports.Storage = exports.BaseConfig = exports.Popup = undefined;
 
   var _extend2 = _interopRequireDefault(_extend);
 
@@ -62,7 +62,7 @@ define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-depende
     return desc;
   }
 
-  var _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _dec5, _dec6, _dec7, _dec8, _dec9, _dec10, _class5, _desc, _value, _class6, _dec11, _class7, _dec12, _dec13, _class8, _desc2, _value2, _class9, _dec14, _class10;
+  var _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _dec5, _dec6, _dec7, _dec8, _dec9, _dec10, _class5, _desc, _value, _class6, _dec11, _dec12, _class7, _desc2, _value2, _class8, _dec13, _class9, _dec14, _class10;
 
   var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
     return typeof obj;
@@ -241,7 +241,6 @@ define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-depende
       this.accessTokenProp = 'access_token';
       this.accessTokenName = 'token';
       this.accessTokenRoot = false;
-      this.accessTokenExpProp = 'exp';
       this.useRefreshToken = false;
       this.autoUpdateToken = true;
       this.clientId = false;
@@ -258,7 +257,7 @@ define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-depende
           name: 'google',
           url: '/auth/google',
           authorizationEndpoint: 'https://accounts.google.com/o/oauth2/auth',
-          redirectUri: window.location.origin || window.location.protocol + '//' + window.location.host,
+          redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
           scope: ['profile', 'email'],
           scopePrefix: 'openid',
           scopeDelimiter: ' ',
@@ -275,7 +274,7 @@ define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-depende
           name: 'facebook',
           url: '/auth/facebook',
           authorizationEndpoint: 'https://www.facebook.com/v2.3/dialog/oauth',
-          redirectUri: window.location.origin + '/' || window.location.protocol + '//' + window.location.host + '/',
+          redirectUri: encodeURI(window.location.origin + '/' || window.location.protocol + '//' + window.location.host + '/'),
           scope: ['email'],
           scopeDelimiter: ',',
           nonce: function nonce() {
@@ -293,7 +292,7 @@ define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-depende
           name: 'linkedin',
           url: '/auth/linkedin',
           authorizationEndpoint: 'https://www.linkedin.com/uas/oauth2/authorization',
-          redirectUri: window.location.origin || window.location.protocol + '//' + window.location.host,
+          redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
           requiredUrlParams: ['state'],
           scope: ['r_emailaddress'],
           scopeDelimiter: ' ',
@@ -308,7 +307,7 @@ define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-depende
           name: 'github',
           url: '/auth/github',
           authorizationEndpoint: 'https://github.com/login/oauth/authorize',
-          redirectUri: window.location.origin || window.location.protocol + '//' + window.location.host,
+          redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
           optionalUrlParams: ['scope'],
           scope: ['user:email'],
           scopeDelimiter: ' ',
@@ -322,7 +321,7 @@ define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-depende
           name: 'yahoo',
           url: '/auth/yahoo',
           authorizationEndpoint: 'https://api.login.yahoo.com/oauth2/request_auth',
-          redirectUri: window.location.origin || window.location.protocol + '//' + window.location.host,
+          redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
           scope: [],
           scopeDelimiter: ',',
           type: '2.0',
@@ -345,7 +344,7 @@ define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-depende
           name: 'live',
           url: '/auth/live',
           authorizationEndpoint: 'https://login.live.com/oauth20_authorize.srf',
-          redirectUri: window.location.origin || window.location.protocol + '//' + window.location.host,
+          redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
           scope: ['wl.emails'],
           scopeDelimiter: ' ',
           requiredUrlParams: ['display', 'scope'],
@@ -360,7 +359,7 @@ define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-depende
           name: 'instagram',
           url: '/auth/instagram',
           authorizationEndpoint: 'https://api.instagram.com/oauth/authorize',
-          redirectUri: window.location.origin || window.location.protocol + '//' + window.location.host,
+          redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
           requiredUrlParams: ['scope'],
           scope: ['basic'],
           scopeDelimiter: '+',
@@ -755,14 +754,8 @@ define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-depende
         }
       }
 
-      this.payload = payload || response;
-
-      this.exp = NaN;
-      if (this.payload) {
-        var exp = this.payload[this.config.accessTokenExpProp];
-        this.exp = Number(new Date(exp));
-        this.exp = this.exp ? this.exp : parseInt(exp, 10);
-      }
+      this.payload = payload;
+      this.exp = payload ? parseInt(payload.exp, 10) : NaN;
 
       this.hasDataStored = true;
 
@@ -866,35 +859,7 @@ define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-depende
 
     return Authentication;
   }(), (_applyDecoratedDescriptor(_class6.prototype, 'getLoginRoute', [_dec5], Object.getOwnPropertyDescriptor(_class6.prototype, 'getLoginRoute'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getLoginRedirect', [_dec6], Object.getOwnPropertyDescriptor(_class6.prototype, 'getLoginRedirect'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getLoginUrl', [_dec7], Object.getOwnPropertyDescriptor(_class6.prototype, 'getLoginUrl'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getSignupUrl', [_dec8], Object.getOwnPropertyDescriptor(_class6.prototype, 'getSignupUrl'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getProfileUrl', [_dec9], Object.getOwnPropertyDescriptor(_class6.prototype, 'getProfileUrl'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getToken', [_dec10], Object.getOwnPropertyDescriptor(_class6.prototype, 'getToken'), _class6.prototype)), _class6)) || _class5);
-  var AuthorizeStep = exports.AuthorizeStep = (_dec11 = (0, _aureliaDependencyInjection.inject)(Authentication), _dec11(_class7 = function () {
-    function AuthorizeStep(authentication) {
-      _classCallCheck(this, AuthorizeStep);
-
-      this.authentication = authentication;
-    }
-
-    AuthorizeStep.prototype.run = function run(routingContext, next) {
-      var isLoggedIn = this.authentication.isAuthenticated();
-      var loginRoute = this.authentication.config.loginRoute;
-
-      if (routingContext.getAllInstructions().some(function (i) {
-        return i.config.auth;
-      })) {
-        if (!isLoggedIn) {
-          return next.cancel(new _aureliaRouter.Redirect(loginRoute));
-        }
-      } else if (isLoggedIn && routingContext.getAllInstructions().some(function (i) {
-        return i.fragment === loginRoute;
-      })) {
-        return next.cancel(new _aureliaRouter.Redirect(this.authentication.config.loginRedirect));
-      }
-
-      return next();
-    };
-
-    return AuthorizeStep;
-  }()) || _class7);
-  var AuthService = exports.AuthService = (_dec12 = (0, _aureliaDependencyInjection.inject)(Authentication, BaseConfig), _dec13 = (0, _aureliaMetadata.deprecated)({ message: 'Use .getAccessToken() instead.' }), _dec12(_class8 = (_class9 = function () {
+  var AuthService = exports.AuthService = (_dec11 = (0, _aureliaDependencyInjection.inject)(Authentication, BaseConfig), _dec12 = (0, _aureliaMetadata.deprecated)({ message: 'Use .getAccessToken() instead.' }), _dec11(_class7 = (_class8 = function () {
     function AuthService(authentication, config) {
       _classCallCheck(this, AuthService);
 
@@ -1084,7 +1049,35 @@ define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-depende
     }]);
 
     return AuthService;
-  }(), (_applyDecoratedDescriptor(_class9.prototype, 'getCurrentToken', [_dec13], Object.getOwnPropertyDescriptor(_class9.prototype, 'getCurrentToken'), _class9.prototype)), _class9)) || _class8);
+  }(), (_applyDecoratedDescriptor(_class8.prototype, 'getCurrentToken', [_dec12], Object.getOwnPropertyDescriptor(_class8.prototype, 'getCurrentToken'), _class8.prototype)), _class8)) || _class7);
+  var AuthorizeStep = exports.AuthorizeStep = (_dec13 = (0, _aureliaDependencyInjection.inject)(Authentication), _dec13(_class9 = function () {
+    function AuthorizeStep(authentication) {
+      _classCallCheck(this, AuthorizeStep);
+
+      this.authentication = authentication;
+    }
+
+    AuthorizeStep.prototype.run = function run(routingContext, next) {
+      var isLoggedIn = this.authentication.isAuthenticated();
+      var loginRoute = this.authentication.config.loginRoute;
+
+      if (routingContext.getAllInstructions().some(function (i) {
+        return i.config.auth;
+      })) {
+        if (!isLoggedIn) {
+          return next.cancel(new _aureliaRouter.Redirect(loginRoute));
+        }
+      } else if (isLoggedIn && routingContext.getAllInstructions().some(function (i) {
+        return i.fragment === loginRoute;
+      })) {
+        return next.cancel(new _aureliaRouter.Redirect(this.authentication.config.loginRedirect));
+      }
+
+      return next();
+    };
+
+    return AuthorizeStep;
+  }()) || _class9);
   var FetchConfig = exports.FetchConfig = (_dec14 = (0, _aureliaDependencyInjection.inject)(_aureliaFetchClient.HttpClient, _aureliaApi.Config, AuthService, BaseConfig), _dec14(_class10 = function () {
     function FetchConfig(httpClient, clientConfig, authService, config) {
       _classCallCheck(this, FetchConfig);
