@@ -500,8 +500,15 @@ export class OAuth1 {
     const data        = extend(true, {}, userData, oauthData);
     const serverUrl   = this.config.withBase(provider.url);
     const credentials = this.config.withCredentials ? 'include' : 'same-origin';
+    
+    return this.config.client.fetch(serverUrl, {
+        method: 'post',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify(data),
+        credentials: credentials
+      });
 
-    return this.config.client.post(serverUrl, data, {credentials: credentials});
+    //return this.config.client.post(serverUrl, data, {credentials: credentials});
   }
 }
 
