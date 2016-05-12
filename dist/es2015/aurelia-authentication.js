@@ -11,7 +11,7 @@ function _applyDecoratedDescriptor(target, property, decorators, descriptor, con
   if ('value' in desc || desc.initializer) {
     desc.writable = true;
   }
-
+e
   desc = decorators.slice().reverse().reduce(function (desc, decorator) {
     return decorator(target, property, desc) || desc;
   }, desc);
@@ -448,7 +448,14 @@ export let OAuth1 = (_dec2 = inject(Storage, Popup, BaseConfig), _dec2(_class3 =
     const serverUrl = this.config.withBase(provider.url);
     const credentials = this.config.withCredentials ? 'include' : 'same-origin';
 
-    return this.config.client.post(serverUrl, data, { credentials: credentials });
+  return this.config.client.fetch(serverUrl, {
+        method: 'post',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify(data),
+        credentials: credentials
+      });
+
+    //return this.config.client.post(serverUrl, data, { credentials: credentials });
   }
 }) || _class3);
 
