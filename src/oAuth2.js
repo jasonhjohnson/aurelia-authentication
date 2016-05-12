@@ -70,7 +70,10 @@ export class OAuth2 {
     const serverUrl   = this.config.withBase(provider.url);
     const credentials = this.config.withCredentials ? 'include' : 'same-origin';
 
-    return this.config.client.post(serverUrl, data, {credentials: credentials});
+    return this.config.client.post(serverUrl, JSON.stringify(data), {
+      credentials: credentials,
+      headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    });
   }
 
   buildQuery(provider) {
