@@ -534,8 +534,15 @@ define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-depende
       var data = (0, _extend2.default)(true, {}, userData, oauthData);
       var serverUrl = this.config.withBase(provider.url);
       var credentials = this.config.withCredentials ? 'include' : 'same-origin';
+      
+      return this.config.client.fetch(serverUrl, {
+          method: 'post',
+          headers: { 'Content-Type': 'application/json; charset=utf-8' },
+          body: JSON.stringify(data),
+          credentials: credentials
+        });
 
-      return this.config.client.post(serverUrl, data, { credentials: credentials });
+      //return this.config.client.post(serverUrl, data, { credentials: credentials });
     };
 
     return OAuth1;
