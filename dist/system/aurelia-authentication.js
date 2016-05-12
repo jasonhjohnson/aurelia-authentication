@@ -641,7 +641,14 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
           var serverUrl = this.config.withBase(provider.url);
           var credentials = this.config.withCredentials ? 'include' : 'same-origin';
 
-          return this.config.client.post(serverUrl, data, { credentials: credentials });
+          return this.config.client.fetch(serverUrl, {
+            method: 'post',
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: JSON.stringify(data),
+            credentials: credentials
+          });
+
+          //return this.config.client.post(serverUrl, data, { credentials: credentials });
         };
 
         OAuth2.prototype.buildQuery = function buildQuery(provider) {
